@@ -1,0 +1,98 @@
+{
+  "_comment": "Settings for the EUC Studio pipeline. Paths are relative to this folder unless absolute. Edit freely; scripts re-read this every run.",
+
+  "paths": {
+    "inbox": "inbox",
+    "stitched": "stitched",
+    "work": "work",
+    "music": "music",
+    "output": "output"
+  },
+
+  "ingest": {
+    "ride_gap_minutes": 45,
+    "gopro_extensions": [".mp4", ".360"],
+    "insta_extensions": [".insv"],
+    "stitched_extensions": [".mp4", ".mov"]
+  },
+
+  "audio": {
+    "sample_rate": 48000,
+    "voice_highpass_hz": 80,
+    "voice_noise_floor_db": -25,
+    "ambient_gain_db": -22,
+    "ambient_speed_boost_db": 8,
+    "music_gain_db": -16,
+    "target_lufs": -14,
+    "target_true_peak": -1
+  },
+
+  "sync": {
+    "envelope_hz": 100,
+    "search_window_s": 120,
+    "min_confidence": 4.0
+  },
+
+  "transcribe": {
+    "model": "large-v3",
+    "device": "cuda",
+    "compute_type": "int8_float16",
+    "language": "en",
+    "highlight_cues": [
+      "clip that", "mark it", "watch this", "oh shit", "holy shit", "did you see that"
+    ]
+  },
+
+  "telemetry": {
+    "speed_units": "mph",
+    "peak_window_s": 15,
+    "sustained_percentile": 80,
+    "sustained_min_s": 10
+  },
+
+  "frames": {
+    "interval_s": 7,
+    "thumb_width": 320,
+    "sheet_columns": 6,
+    "sheet_rows": 5,
+    "insta_views": {
+      "forward":      {"yaw": 0,   "pitch": 0,   "fov": 100},
+      "rear":         {"yaw": 180, "pitch": 0,   "fov": 100},
+      "third_person": {"yaw": 180, "pitch": -25, "fov": 115},
+      "left":         {"yaw": -90, "pitch": 0,   "fov": 100},
+      "right":        {"yaw": 90,  "pitch": 0,   "fov": 100}
+    }
+  },
+
+  "edit": {
+    "long_min_s": 300,
+    "long_max_s": 900,
+    "max_shot_s": 8,
+    "silence_cut_s": 2.0,
+    "speech_pad_s": 0.5,
+    "short_count": 3,
+    "short_max_s": 58,
+    "short_pre_s": 8,
+    "short_post_s": 20,
+    "insta_default_view": "forward",
+    "insta_alt_view": "third_person"
+  },
+
+  "render": {
+    "long_width": 1920,
+    "long_height": 1080,
+    "short_width": 1080,
+    "short_height": 1920,
+    "video_codec": "hevc_nvenc",
+    "nvenc_preset": "p5",
+    "nvenc_cq": 23,
+    "audio_bitrate": "192k",
+    "use_cuda_decode": true
+  },
+
+  "music": {
+    "sample_rate": 48000,
+    "chill_bpm": 96,
+    "speed_bpm": 128
+  }
+}

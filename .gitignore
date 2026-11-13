@@ -1,0 +1,24 @@
+# Footage, working files and renders never go in git. Only scripts and text.
+inbox/
+stitched/
+work/
+output/
+music/*.wav
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Media anywhere else
+*.mp4
+*.MP4
+*.insv
+*.mov
+*.wav
+*.png
+*.jpg
+
+# Windows
+Thumbs.db
+desktop.ini
