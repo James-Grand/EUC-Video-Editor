@@ -11,6 +11,7 @@ practical "how do I run it" sheet.
 | Project venv | `.venv\` (in this folder) | private copy of Python with just this project's packages |
 | ffmpeg 8.0.1 (Gyan.dev full build) | installed by winget, on PATH | all video/audio work; has NVENC GPU encoding and the v360 360-reframe filter. **Stay on 8.0.x**: 8.1 and 9.x need NVIDIA driver 610+, this PC has 591 (if the driver gets updated, any version is fine) |
 | git 2.56 | `C:\Program Files\Git` | version control for scripts and the style guide (not footage) |
+| GitHub CLI 2.104 | `C:\Program Files\GitHub CLI` | signed in as James-Grand; remote is https://github.com/James-Grand/EUC-Video-Editor (public). Push with `git push`. |
 | faster-whisper + large-v3 model | venv + `%USERPROFILE%\.cache\huggingface` | speech-to-text on the GPU |
 | NVIDIA cuBLAS / cuDNN | inside the venv (pip packages) | lets faster-whisper use the RTX 4050 |
 | numpy, scipy, soundfile, Pillow | venv | sync maths, music synthesis, contact sheets |
