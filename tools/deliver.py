@@ -74,6 +74,26 @@ def main(ride_id: str) -> Path:
         L.append("No shorts this time: nothing scored high enough. Say a cue ('clip that') and I'll build one around it.")
     L.append("")
 
+    # Music: what each video got (written by render.py, styles from docs/music_brief.md).
+    music_lines = []
+    for which in ["long"] + [s["id"] for s in shorts]:
+        mp = read_json(wd / f"music_plan_{which}.json", {})
+        if mp.get("sections"):
+            parts, t = [], 0.0
+            for s in mp["sections"]:
+                drop = f", drop at {fmt_time(t + s['drop_at'])}" if "drop_at" in s else ""
+                parts.append(f"{fmt_time(t)} {s['style']} ({s['bpm']} BPM{drop})")
+                t += s["duration"]
+            music_lines.append(f"- **{which}**: " + " -> ".join(parts))
+    if music_lines:
+        L.append("## Music\n")
+        L.append("All original, generated in `tools/make_music.py` from the EUC '26 brief (`docs/music_brief.md`).")
+        L += music_lines
+        stems = od / "music_stems"
+        if stems.exists():
+            L.append(f"- Stems for Resolve (drums / bass / music / vocals, full level, before ducking): `music_stems/`")
+        L.append("")
+
     L.append("## Low confidence / please check\n")
     L += [f"- {n}" for n in low] or ["- Nothing flagged."]
     L.append("")

@@ -1,0 +1,57 @@
+[
+  {
+    "file": "demo_dnb_45s.wav",
+    "style": "dnb",
+    "bpm": 174,
+    "duration_s": 45,
+    "description": "Drum & bass: rolling breaks, reese bass, rave stabs. High-speed runs, downhill, overtakes.",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_electro_45s.wav",
+    "style": "electro",
+    "bpm": 128,
+    "duration_s": 45,
+    "description": "Electro house: four-on-the-floor, wobble bass, distorted saw stabs, sirens. Hard-hitting moments (highlight cues).",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_funk_45s.wav",
+    "style": "funk",
+    "bpm": 110,
+    "duration_s": 45,
+    "description": "Funk-hop / electro-swing: swung breakbeat, slap bass, brass stabs, 'hey!' shouts, scratches. Cruising and talking.",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_indie_45s.wav",
+    "style": "indie",
+    "bpm": 118,
+    "duration_s": 45,
+    "description": "Sunny indie electronic: soft four-on-the-floor, warm pads, arpeggios. Scenery and golden hour.",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_blues_45s.wav",
+    "style": "blues",
+    "bpm": 92,
+    "duration_s": 45,
+    "description": "Gritty blues riff over a foot-stomp beat. Accent only: intro sting / tension, never a whole track.",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_liquid_45s.wav",
+    "style": "liquid",
+    "bpm": 174,
+    "duration_s": 45,
+    "description": "Liquid drum & bass: rolling but uplifting, pads, wordless vocals. Outro.",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  },
+  {
+    "file": "demo_arc_140s.wav",
+    "style": "arc",
+    "duration_s": 140,
+    "description": "The brief's long-video arc: blues sting -> funk -> dnb -> indie -> liquid outro. Stems alongside (demo_arc_140s_drums/bass/music/vocals.wav).",
+    "generator": "tools/make_music.py (numpy synthesis, original)"
+  }
+]

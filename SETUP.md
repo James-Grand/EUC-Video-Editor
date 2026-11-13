@@ -54,8 +54,9 @@ Useful variants:
 ## Where things land
 
 - `work\<ride>\` - manifest, audio, transcript, speed.csv, contact sheets, edit_plan.json
-- `output\<ride>\` - long.mp4, short_01.mp4..., long.srt, timeline.fcpxml, notes.md, run_log.md
-- `music\` - reusable generated beds + catalog.json
+- `output\<ride>\` - long.mp4, short_01.mp4..., long.srt, timeline.fcpxml, notes.md, run_log.md, music_stems\
+- `music\` - demo of every music style + catalog.json (rebuild: `tools\make_music.py --library`)
+- `docs\music_brief.md` - the music direction (from the EUC '26 playlist)
 
 ## Tuning
 

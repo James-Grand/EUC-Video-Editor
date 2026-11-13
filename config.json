@@ -40,6 +40,9 @@
     "language": "en",
     "highlight_cues": [
       "clip that", "mark it", "watch this", "oh shit", "holy shit", "did you see that"
+    ],
+    "excitement_words": [
+      "whoa", "woah", "wow", "woo", "woohoo", "let's go", "oh my god", "oh my gosh", "holy crap", "sick"
     ]
   },
 
@@ -47,7 +50,11 @@
     "speed_units": "mph",
     "peak_window_s": 15,
     "sustained_percentile": 80,
-    "sustained_min_s": 10
+    "sustained_min_s": 10,
+    "moving_wind": 50,
+    "moving_bump": 1.5,
+    "motion_peak_percentile": 90,
+    "motion_max_peaks": 8
   },
 
   "frames": {
@@ -91,8 +98,30 @@
   },
 
   "music": {
+    "_comment": "Direction comes from docs/music_brief.md (Tyler's EUC '26 playlist). Each style below is one row of the brief's table.",
     "sample_rate": 48000,
-    "chill_bpm": 96,
-    "speed_bpm": 128
+    "styles": {
+      "dnb":     {"bpm": 174, "use": "Drum & bass: rolling breaks, reese bass, rave stabs. High-speed runs, downhill, overtakes."},
+      "electro": {"bpm": 128, "use": "Electro house: four-on-the-floor, wobble bass, distorted saw stabs, sirens. Hard-hitting moments (highlight cues)."},
+      "funk":    {"bpm": 110, "use": "Funk-hop / electro-swing: swung breakbeat, slap bass, brass stabs, 'hey!' shouts, scratches. Cruising and talking."},
+      "indie":   {"bpm": 118, "use": "Sunny indie electronic: soft four-on-the-floor, warm pads, arpeggios. Scenery and golden hour."},
+      "blues":   {"bpm": 92,  "use": "Gritty blues riff over a foot-stomp beat. Accent only: intro sting / tension, never a whole track."},
+      "liquid":  {"bpm": 174, "use": "Liquid drum & bass: rolling but uplifting, pads, wordless vocals. Outro."}
+    },
+    "style_for": {
+      "speed": "dnb",
+      "cue": "electro",
+      "motion": "dnb",
+      "commentary": "funk",
+      "scenery": "indie"
+    },
+    "long_intro_style": "blues",
+    "long_intro_max_s": 15,
+    "long_outro_style": "liquid",
+    "long_outro_s": 30,
+    "min_section_s": 20,
+    "max_track_s": 180,
+    "voice_pocket_db": -4,
+    "write_stems": "long"
   }
 }

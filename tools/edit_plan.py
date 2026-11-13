@@ -6,7 +6,12 @@ Plain-language summary (v1 rules, all tunable in config.json "edit"):
   1. Collect "moments" worth showing:
        - highlight cues Tyler spoke ("clip that" etc.)  -> highest score
        - GPS speed peaks and sustained fast stretches    -> medium score
+       - natural exclamations ("whoa", "wow", "let's go") -> medium score
+       - GoPro motion sensors: sharp turns / carving and
+         rough-terrain jolts (gyro + accelerometer)       -> medium score
        - every stretch where he's talking                -> keep (his voice is the channel)
+     Filler shots (when the ride is short on all of the above) go on the
+     busiest riding in each gap, never on a stretch where he's stopped.
   2. Turn each moment into a time window on the ride timeline. A cue like
      "clip that" refers to what just happened, so its window reaches back
      ~12 s; "watch this" points forward, so its window reaches ahead ~15 s.
@@ -80,9 +85,39 @@ def total(wins: list[dict]) -> float:
 # Build candidate windows
 # ----------------------------------------------------------------------------
 
-def build_windows(ride_len: float, islands: list[dict], cues: list[dict], speed: dict) -> list[dict]:
+def find_exclamations(words: list[dict]) -> list[dict]:
+    """Natural excitement ("whoa", "wow", "let's go") - softer than the
+    deliberate cue phrases, but still a sign something happened."""
+    import re
+    norm = [re.sub(r"[^a-z0-9' ]+", " ", w["word"].lower()).strip() for w in words]
+    hits = []
+    for phrase in CONFIG["transcribe"].get("excitement_words", []):
+        target = phrase.split()
+        k = len(target)
+        for i in range(len(norm) - k + 1):
+            if norm[i:i + k] == target:
+                hits.append({"word": phrase, "time": words[i]["start"], "end": words[i + k - 1]["end"]})
+    hits.sort(key=lambda h: h["time"])
+    out = []
+    for h in hits:  # one per 5 s is plenty
+        if not out or h["time"] - out[-1]["time"] >= 5:
+            out.append(h)
+    return out
+
+
+def interest_at(motion: dict, t: float) -> float:
+    pts = motion.get("interest", [])
+    if not pts:
+        return 0.0
+    i = min(range(len(pts)), key=lambda k: abs(pts[k][0] - t))
+    return pts[i][1]
+
+
+def build_windows(ride_len: float, islands: list[dict], cues: list[dict], speed: dict,
+                  motion: dict | None = None, exclaims: list[dict] | None = None) -> list[dict]:
     cfg = CONFIG["edit"]
     pad = cfg["speech_pad_s"]
+    motion = motion or {}
     wins = []
 
     # Talk blocks: speech islands merged across pauses shorter than silence_cut_s.
@@ -116,12 +151,44 @@ def build_windows(ride_len: float, islands: list[dict], cues: list[dict], speed:
         wins.append({"start": max(0, mid - 8), "end": min(ride_len, mid + 8), "score": 4,
                      "reasons": [f"sustained speed {st['avg_speed_mps']*2.237:.0f} mph {fmt_time(st['start'])}-{fmt_time(st['end'])}"],
                      "is_cue": False, "anchor": mid})
+
+    # Exclamations react to what just happened, so reach back like "clip that" (but shorter).
+    for x in exclaims or []:
+        wins.append({"start": max(0, x["time"] - 8), "end": min(ride_len, x["end"] + 4), "score": 6,
+                     "reasons": [f"exclamation '{x['word']}' at {fmt_time(x['time'])}"], "is_cue": False,
+                     "anchor": x["time"]})
+
+    # GoPro motion sensors: sharp turns / carving and rough-terrain jolts (score 4-6,
+    # so the strongest can become shorts), plus sustained rough stretches.
+    for p in motion.get("peaks", []):
+        wins.append({"start": max(0, p["time"] - 6), "end": min(ride_len, p["time"] + 6),
+                     "score": 4 + 2 * p["strength"],
+                     "reasons": [f"motion: {p['label']} at {fmt_time(p['time'])}"],
+                     "is_cue": False, "anchor": p["time"]})
+    for st in motion.get("stretches", []):
+        mid = (st["start"] + st["end"]) / 2
+        wins.append({"start": max(0, mid - 8), "end": min(ride_len, mid + 8), "score": 3.5,
+                     "reasons": [f"motion: rough stretch {fmt_time(st['start'])}-{fmt_time(st['end'])}"],
+                     "is_cue": False, "anchor": mid})
     return [w for w in wins if w["end"] - w["start"] >= 1.0]
 
 
-def fit_to_length(wins: list[dict], ride_len: float, notes: list[str]) -> list[dict]:
+def fit_to_length(wins: list[dict], ride_len: float, notes: list[str], motion: dict | None = None) -> list[dict]:
     cfg = CONFIG["edit"]
+    motion = motion or {}
+    stopped = motion.get("stopped", [])
     wins = merge_windows(wins)
+
+    def filler_spot(a: float, b: float) -> float:
+        """Most interesting moment (turning + shaking) in the gap, never while
+        stopped. Falls back to the middle when there's no sensor data."""
+        if not motion.get("interest"):
+            return (a + b) / 2
+        best, best_v = (a + b) / 2, -1.0
+        for t, v in motion["interest"]:
+            if a + 3 <= t <= b - 3 and not any(s0 <= t <= s1 for s0, s1 in stopped) and v > best_v:
+                best, best_v = t, v
+        return best
 
     if total(wins) < cfg["long_min_s"] and ride_len > 0:
         # Fillers: 6-second scenery chunks spread through uncovered time.
@@ -140,8 +207,10 @@ def fit_to_length(wins: list[dict], ride_len: float, notes: list[str]) -> list[d
                 if need <= 0:
                     new_gaps.append((a, b))
                     continue
-                mid = (a + b) / 2
-                fillers.append({"start": mid - 3, "end": mid + 3, "score": 1, "reasons": ["scenery filler"],
+                mid = filler_spot(a, b)
+                reason = "scenery filler" + (f" (busiest riding in gap, interest {interest_at(motion, mid):.2f})"
+                                             if motion.get("interest") else "")
+                fillers.append({"start": mid - 3, "end": mid + 3, "score": 1, "reasons": [reason],
                                 "is_cue": False, "anchor": mid})
                 need -= 6
                 if mid - 3 - a >= 10:
@@ -167,8 +236,11 @@ def fit_to_length(wins: list[dict], ride_len: float, notes: list[str]) -> list[d
 # Shots
 # ----------------------------------------------------------------------------
 
-def make_shots(win: dict, sources: list[dict], vertical: bool, notes: list[str]) -> list[dict]:
-    """Chop a window into <= max_shot_s shots, rotating cameras/views."""
+def make_shots(win: dict, sources: list[dict], vertical: bool, notes: list[str],
+               rot: dict | None = None) -> list[dict]:
+    """Chop a window into <= max_shot_s shots, rotating cameras/views.
+    Pass the same rot dict for every window of a video so the rotation carries
+    on from one moment to the next instead of restarting on Insta forward."""
     cfg = CONFIG["edit"]
     views = CONFIG["frames"]["insta_views"]
     max_shot = cfg["max_shot_s"]
@@ -176,7 +248,7 @@ def make_shots(win: dict, sources: list[dict], vertical: bool, notes: list[str])
     t = win["start"]
     rotation = [("insta", cfg["insta_default_view"]), ("gopro", None),
                 ("insta", cfg["insta_alt_view"]), ("gopro", None)]
-    k = 0
+    k = rot["k"] if rot else 0
     while t < win["end"] - 0.25:
         end = min(win["end"], t + max_shot)
         # If what remains after this shot is a stub under 2 s, absorb it.
@@ -216,6 +288,8 @@ def make_shots(win: dict, sources: list[dict], vertical: bool, notes: list[str])
             shot["v360"] = v
         shots.append(shot)
         t = end
+    if rot is not None:
+        rot["k"] = k
     return shots
 
 
@@ -239,8 +313,9 @@ def plan_long(wins: list[dict], sources: list[dict], notes: list[str]) -> dict:
     ordered += sorted(rest + leftovers, key=lambda w: w["start"])
 
     segments, cursor = [], 0.0
+    rot = {"k": 0}
     for w in ordered:
-        for sh in make_shots(w, sources, vertical=False, notes=notes):
+        for sh in make_shots(w, sources, vertical=False, notes=notes, rot=rot):
             sh["out_in"] = round(cursor, 3)
             sh["out_out"] = round(cursor + sh["duration"], 3)
             cursor += sh["duration"]
@@ -306,13 +381,22 @@ def main(ride_id: str) -> dict:
 
     if sync.get("low_confidence"):
         notes.append("Camera sync confidence was low; GoPro shots may be slightly out of step with the voice.")
+    motion = read_json(wd / "motion_highlights.json", {})
+    exclaims = find_exclamations(transcript.get("words", []))
     if not cues:
-        notes.append("No spoken highlight cues found. Edit leans on speed data and commentary only.")
+        notes.append("No spoken highlight cues found. Edit leans on exclamations, motion sensors, speed data "
+                     "and commentary instead.")
     if not speed.get("peaks"):
         notes.append("No GPS speed data; speed highlights unavailable for this ride.")
+    if motion.get("peaks"):
+        notes.append(f"Used {len(motion['peaks'])} GoPro motion moment(s) (sharp turns / rough-terrain jolts). "
+                     "These are guesses from the gyro/accelerometer: check they're actually interesting.")
+    if exclaims:
+        notes.append("Exclamations used as soft highlights: " +
+                     ", ".join(f"'{x['word']}' at {fmt_time(x['time'])}" for x in exclaims))
 
-    wins = build_windows(ride_len, transcript.get("speech_islands", []), cues, speed)
-    wins = fit_to_length(wins, ride_len, notes)
+    wins = build_windows(ride_len, transcript.get("speech_islands", []), cues, speed, motion, exclaims)
+    wins = fit_to_length(wins, ride_len, notes, motion)
     long = plan_long(wins, sources, notes)
     shorts = plan_shorts(wins, transcript.get("speech_islands", []), sources, ride_len, notes)
     if not shorts:

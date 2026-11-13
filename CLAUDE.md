@@ -40,6 +40,7 @@ at the start of every session.
 ```
 EUC-Studio/
   CLAUDE.md          <- this file
+  docs/              <- briefs and reference (music_brief.md = music direction)
   inbox/             <- Tyler drops raw files here (never modify)
   stitched/          <- Insta360 Studio equirectangular exports (never modify)
   work/<ride-id>/    <- transcripts, frames, telemetry, edit plans, temp files
@@ -90,6 +91,12 @@ before running long ones.
 ### 6. Telemetry
 - Extract GPS speed from GoPro GPMF data into `speed.csv` (time, speed, lat, lon).
 - Use speed peaks and sustained fast stretches as highlight candidates.
+- Also extract motion from the GoPro gyro / accelerometer / wind meter into
+  `motion.csv` (works with GPS off): sharp turns / carving and rough-terrain
+  jolts are highlight candidates, stopped stretches are avoided, and filler
+  shots go on the busiest riding in each gap.
+- Natural exclamations ("whoa", "wow", "let's go", list in `config.json`)
+  are soft highlights, weaker than the deliberate cue phrases.
 
 ### 7. Look at the footage
 - Sample low-res frames (about one every 5–10 seconds) from both cameras.
@@ -111,9 +118,30 @@ Make two kinds of video from every ride:
 selfie stick" view). Animated panning comes later once v1 works.
 
 ### 9. Music
-- Generate original music with Python (numpy/scipy synthesis). Electronic style.
-- Match length to the video. Vary tempo and mood by section (chill cruise vs speed).
-- Save reusable beds in `music/` with a short description of each.
+**Direction: `docs/music_brief.md`** (written from Tyler's Spotify playlist
+"EUC '26"). Read it before changing anything about the music. Summary:
+- Generate original music with Python (numpy/scipy synthesis) in
+  `tools/make_music.py`. No samples, no AI models, nothing to license.
+- Six styles, one per row of the brief's table (BPMs in `config.json`):
+  | Style | BPM | Used for |
+  |---|---|---|
+  | `dnb` drum & bass | 174 | speed peaks, sustained fast stretches |
+  | `electro` electro house | 128 | spoken highlight cues ("clip that", "watch this"...) |
+  | `funk` funk-hop / electro-swing | 110 | cruising, talking (the bulk of a vlog) |
+  | `indie` sunny indie electronic | 118 | scenery fillers |
+  | `blues` gritty blues + stomp | 92 | accent only: the long video's cold-open sting |
+  | `liquid` liquid drum & bass | 174 | outro (last ~30 s of the long video) |
+- Long video follows the playlist arc: blues sting -> funk -> dnb/electro
+  where the ride peaks -> indie on scenery -> liquid outro.
+- Shorts: one track (dnb, electro or funk), drop lands on the short's best moment.
+- Built in 4- and 8-bar phrases so cuts land on downbeats. Music hits within
+  the first few seconds. Risers and snare rolls build into each new section.
+  Ends clean on a ringing downbeat, not a fade.
+- Leave room for voice: 1-4 kHz is dipped (`voice_pocket_db`).
+- Sections over 3 min are split into separate "tracks" in new keys.
+- Stems (drums, bass, music, vocals) go to `output/<ride-id>/music_stems/`.
+- Run `python tools/make_music.py --library` to rebuild the demo of every style
+  in `music/` (with `music/catalog.json` describing each).
 
 ### 10. Mix
 - Voice on top. Music ducks under voice automatically (`sidechaincompress`).
@@ -132,6 +160,7 @@ selfie stick" view). Animated panning comes later once v1 works.
 In `output/<ride-id>/`:
 - `long.mp4`, `short_01.mp4`, `short_02.mp4`, ...
 - `long.srt`
+- `music_stems/` (long video's music as drums / bass / music / vocals, for Resolve)
 - `timeline.fcpxml` (so Tyler can open the edit in DaVinci Resolve if he wants)
 - `notes.md`: what you chose and why, anything low-confidence, and 1–3 specific
   questions for Tyler that would most improve the next video.
@@ -147,5 +176,20 @@ Starting defaults until Tyler says otherwise:
 - Keep Tyler's commentary. His voice is the channel.
 - No intros, no subscribe begging, no stock transitions.
 
+**Music** (from `docs/music_brief.md`):
+- High energy and forward momentum. Fun and a bit cocky, not epic-cinematic or emotional.
+- Short and punchy. Get to the hook fast; no ambient intros longer than ~8 bars.
+- Put a drop or clean downbeat where the ride peaks.
+- Vocals only as short chops or generic hype shouts ("hey!"). Never imitate a real artist.
+- Blues is an accent (intro, tension, breakdown), never a whole track.
+- Never use: trap, lo-fi chill, orchestral "epic trailer", sad piano, country,
+  or anything slow or moody for long stretches.
+- Reference artists in the brief are for understanding the vibe only. Never
+  copy their melodies, hooks, vocal lines, signature sounds or lyrics.
+
 ### Tyler's feedback log
 (Add dated entries here as feedback comes in.)
+- **2026-11-13** — Music brief added (`docs/music_brief.md`, from the "EUC '26"
+  playlist). Replaced the old chill/speed music with six brief-based styles,
+  the blues -> funk -> dnb -> indie -> liquid arc, drops on highlight moments,
+  a voice pocket, and stems. Added the Music rules above.
