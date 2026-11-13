@@ -75,7 +75,8 @@ def contact_sheets(frame_dir: Path, sheet_dir: Path, label: str, interval: float
     for n in range(math.ceil(len(frames) / per)):
         batch = frames[n * per:(n + 1) * per]
         w, h = Image.open(batch[0]).size
-        sheet = Image.new("RGB", (cols * w, rows * h + 24), (20, 20, 20))
+        used_rows = math.ceil(len(batch) / cols)  # last sheet may be short; don't leave black space
+        sheet = Image.new("RGB", (cols * w, used_rows * h + 24), (20, 20, 20))
         draw = ImageDraw.Draw(sheet)
         t_first = offset + (n * per) * interval
         t_last = offset + (n * per + len(batch) - 1) * interval

@@ -60,10 +60,13 @@ def merge_windows(wins: list[dict]) -> list[dict]:
         if merged and w["start"] <= merged[-1]["end"]:
             m = merged[-1]
             m["end"] = max(m["end"], w["end"])
+            # The merged window's anchor (the moment a short is built around)
+            # follows whichever piece scored higher. Compare BEFORE updating score.
+            if w["score"] > m["score"]:
+                m["anchor"] = w["anchor"]
             m["score"] = max(m["score"], w["score"])
             m["reasons"] = sorted(set(m["reasons"] + w["reasons"]))
             m["is_cue"] = m["is_cue"] or w["is_cue"]
-            m["anchor"] = m["anchor"] if m["score"] >= w["score"] else w["anchor"]
         else:
             merged.append(dict(w))
     return merged

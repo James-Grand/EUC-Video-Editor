@@ -200,20 +200,51 @@ def build_audio(segments: list[dict], wd: Path, out_dir: Path, islands: list[dic
     return {"sections": sections, "duration": len(voice) / sr}
 
 
+def measure_loudness(wav: Path) -> dict:
+    """First pass of two-pass loudnorm: measure the mix so the second pass can hit the target exactly."""
+    import json as _json
+    cfg = CONFIG["audio"]
+    proc = run([FFMPEG, "-hide_banner", "-nostats", "-i", str(wav),
+                "-af", f"loudnorm=I={cfg['target_lufs']}:TP={cfg['target_true_peak']}:LRA=11:print_format=json",
+                "-f", "null", "-"], check=False)
+    text = proc.stderr or ""
+    start, end = text.rfind("{"), text.rfind("}")
+    if start < 0 or end < 0:
+        return {}
+    try:
+        return _json.loads(text[start:end + 1])
+    except ValueError:
+        return {}
+
+
 def mix_and_mux(video: Path, out_dir: Path, final: Path, captions: Path | None, fps: float) -> None:
     cfg = CONFIG["audio"]
     r = CONFIG["render"]
+    sr = cfg["sample_rate"]
+
+    # Pass 1: mix voice + ducked music + ambient into one raw stereo WAV.
     graph = (
-        f"[1:a]aformat=channel_layouts=stereo,asplit[vA][vB];"
-        f"[2:a]volume={cfg['music_gain_db']}dB[m];"
+        f"[0:a]aformat=channel_layouts=stereo,asplit[vA][vB];"
+        f"[1:a]volume={cfg['music_gain_db']}dB[m];"
         f"[m][vB]sidechaincompress=threshold=0.015:ratio=6:attack=25:release=500:makeup=1[md];"
-        f"[3:a]aformat=channel_layouts=stereo[amb];"
-        f"[vA][md][amb]amix=inputs=3:normalize=0:duration=first:dropout_transition=0[mix];"
-        f"[mix]loudnorm=I={cfg['target_lufs']}:TP={cfg['target_true_peak']}:LRA=11[aout]"
+        f"[2:a]aformat=channel_layouts=stereo[amb];"
+        f"[vA][md][amb]amix=inputs=3:normalize=0:duration=first:dropout_transition=0[mix]"
     )
-    args = ["-i", str(video), "-i", str(out_dir / "voice_cut.wav"), "-i", str(out_dir / "music.wav"),
-            "-i", str(out_dir / "ambient_cut.wav"), "-filter_complex", graph,
-            "-map", "0:v", "-map", "[aout]", "-c:a", "aac", "-b:a", r["audio_bitrate"], "-shortest"]
+    mix_raw = out_dir / "mix_raw.wav"
+    ffmpeg(["-i", str(out_dir / "voice_cut.wav"), "-i", str(out_dir / "music.wav"),
+            "-i", str(out_dir / "ambient_cut.wav"), "-filter_complex", graph, "-map", "[mix]",
+            "-ar", str(sr), "-c:a", "pcm_s16le", str(mix_raw)])
+
+    # Pass 2: measure, then normalise with the measured values (accurate, no pumping).
+    m = measure_loudness(mix_raw)
+    ln = f"loudnorm=I={cfg['target_lufs']}:TP={cfg['target_true_peak']}:LRA=11"
+    if m:
+        ln += (f":measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}"
+               f":measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true")
+    # loudnorm works internally at 192 kHz and leaves the stream there; bring it back down.
+    af = f"{ln},aresample={sr}"
+    args = ["-i", str(video), "-i", str(mix_raw), "-map", "0:v", "-map", "1:a", "-af", af,
+            "-c:a", "aac", "-b:a", r["audio_bitrate"], "-shortest"]
     if captions:
         style = ("FontName=Arial,FontSize=22,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
                  "BackColour=&H80000000,BorderStyle=1,Outline=3,Shadow=0,Alignment=2,MarginV=70")
